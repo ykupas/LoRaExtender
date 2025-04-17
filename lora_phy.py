@@ -22,7 +22,7 @@ class LoRaPHY:
         self.n_rx2Window = 2000 # ms
         self.n_accuracy = 40 # ppm
         self.n_idle_duration = 1 # ms
-        self.n_cad_symbols = 12 # symbols
+        self.n_cad_symbols = 16 # symbols
         self.n_resend_delay = 10000 # ms
         self._n_rxPeriodicity = 1000 # ms
         self.n_for_delay = 1000 # ms
