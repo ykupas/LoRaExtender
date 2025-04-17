@@ -192,26 +192,26 @@ class LoRaWAN(LoRaPHY):
         # Calculate total uplink event time
         upTime = txUpTime + rxUpTime + idleUpTime + sleepUpTime
 
-        # Second, calculate how many Cad events has in the remaining of upPeriod
-        cadInUp = (((uplinkPeriod/n)*1000) - upTime)/self._n_rxPeriodicity
-        rxCadEventTime = cadInUp*(self.ToSymb() * self.n_cad_symbols)
-        idleCadEventTime = cadInUp*(self.n_idle_duration)
-        sleepCadEventTime = cadInUp*(self._n_rxPeriodicity - (self.ToSymb() * self.n_cad_symbols + self.n_idle_duration))
+        # Second, calculate Cad event time
+        rxCadEventTime = self.ToSymb() * self.n_cad_symbols
+        idleCadEventTime = self.n_idle_duration
+        sleepCadEventTime = self._n_rxPeriodicity - (rxCadEventTime + self.n_idle_duration)
 
-        # Third, calculate in geral event (up + cad) all times
-        txTotalEventTime = txUpTime
-        rxTotalEventTime = rxUpTime + rxCadEventTime
-        idleTotalEventTime = idleUpTime + idleCadEventTime
-        sleepTotalEventTime = sleepUpTime + sleepCadEventTime
+        # # REVER TODO:
 
-        # Forth, calculate how many uplink are in simulation with n endpoints connected
-        nUplinksEvents = (simDuration/uplinkPeriod)*n
+        # # Third, count how many Uplinks and Cads happen
+        # cadInUp = ((uplinkPeriod)*n - upTime)//self._n_rxPeriodicity        
+        # txTotalEventTime = txUpTime
+        # rxTotalEventTime = rxUpTime + cadInUp*rxCadEventTime
+        # idleTotalEventTime = idleUpTime + cadInUp*idleCadEventTime
+        # sleepTotalEventTime = sleepUpTime + cadInUp*sleepCadEventTime      
 
-        # Finally, calculate total tx, rx, idle and sleep in seconds
-        txDuration = nUplinksEvents*txTotalEventTime/1000
-        rxDuration = nUplinksEvents*rxTotalEventTime/1000
-        idleDuration = nUplinksEvents*idleTotalEventTime/1000
-        sleepDuration = nUplinksEvents*sleepTotalEventTime/1000
+        # # Finally, calculate total tx, rx, idle and sleep in seconds
+        # nUplinksEvents = simDuration/(uplinkPeriod/n)
+        # txDuration = nUplinksEvents*txTotalEventTime/1000
+        # rxDuration = nUplinksEvents*rxTotalEventTime/1000
+        # idleDuration = nUplinksEvents*idleTotalEventTime/1000
+        # sleepDuration = nUplinksEvents*sleepTotalEventTime/1000
 
         # Return tx, rx, idle and sleep duration
         return txDuration, rxDuration, idleDuration, sleepDuration
