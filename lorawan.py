@@ -97,7 +97,7 @@ class LoRaWAN(LoRaPHY):
     # Simulate a endpoint LoRaWAN one-hop relay network confirmed uplink from endpoint
     #
     # self -> object to handle endpoint state
-    # upPeriodicity -> periodicity of application in seconds
+    # uplinkPeriod -> periodicity of application in seconds
     # dataLength -> size in bytes of application payload
     # simDuration -> simulation duration in seconds
     #
@@ -108,41 +108,93 @@ class LoRaWAN(LoRaPHY):
 
         # Calculate number of symbols of long preambles
         calcPreamble = self.CalcPreamble(uplinkPeriod)
-        # print("Calculated preamble size: ", calcPreamble)
+        txtime = 0
+        rxTime = 0
+        idleTime = 0
+        sleepTime = 0
 
-        #### Uplink ṕrocess ####
-        event = 0
-
-        # Calculate every TX in uplink process
-        # Wor send
-        worSendTime = self.GetToAofWor(calcPreamble)
-        event = event + 1
-        # Up send
-        uplinkSendTime = self.GetToAofUplink(dataLength)
-        event = event + 1
-        # Tx total
-        txTime = worSendTime + uplinkSendTime
-
-        # Calculate every RX in uplink process
-        # Wor Ack receive
-        worAckReceiveTime = self.GetToAofWorAck()
-        event = event + 1
-        # Up Ack receive
-        uplinkAckReceiveTime = self.GetToAofUplinkAck()
-        event = event + 1
-        # Rx Total
-        rxTime = worAckReceiveTime + uplinkAckReceiveTime
-
-        # Calculate every idle in uplink process
-        # Number of times an event happend
-        idleTime = event * self.n_idle_duration
-
-        # Calculate sleep in rest of upPeriod time
-        # upPeriod is full period time, less what already happened
-        sleepTime = uplinkPeriod*1000 - (txTime + rxTime + idleTime)
-
+        # Calculate uplink event tx, rx, idle, sleep tim
+        # Tx WOR
+        txTime = self.GetToAofWor(calcPreamble)
+        # Idle 
+        idleTime = self.n_idle_duration
+        # Sleep WOR_ACK_DELAY
+        sleepTime = self.GetWorDelay() - self.n_idle_duration
+        # Rx WOR ACK
+        rxTime = self.GetToAofWorAck()
+        # Idle 
+        idleTime = idleTime + self.n_idle_duration
+        # Sleep WOR_DATA_DELAY
+        sleepTime = sleepTime + self.GetWorDelay() - self.n_idle_duration
+        # Tx uplink
+        txTime = txTime + self.GetToAofUplink(dataLength)
+        # Idle
+        idleTime = idleTime + self.n_idle_duration
+        # Sleep RX1 window (same as wait for forward uplink and receive ack in RXR)
+        sleepTime = sleepTime + self.GetWorDelay() - self.n_idle_duration
+        # Rx uplink ACK
+        rxTime = rxTime + self.GetToAofUplinkAck()
+        # Idle
+        idleTime = idleTime + self.n_idle_duration
+        # Sleep rest of uplink slot of periodicity 
+        sleepTime = sleepTime + uplinkPeriod*1000 - (txTime + rxTime + idleTime)
+        
         # Calculate how many upPeriods is in simDuration
-        nUp = simDuration/uplinkPeriod
+        nUp = simDuration//uplinkPeriod
+        sleepTime = sleepTime + (simDuration % uplinkPeriod)
+
+        # Calculate total tx, rx, idle and sleep time with nUp
+        txDuration = txTime*nUp/1000
+        rxDuration = rxTime*nUp/1000
+        idleDuration = idleTime*nUp/1000
+        sleepDuration = sleepTime*nUp/1000
+
+        return txDuration, rxDuration, idleDuration, sleepDuration
+    
+
+    #########################################################################################
+    # Simulate a endpoint LoRaWAN one-hop relay network confirmed uplink from endpoint
+    #
+    # self -> object to handle endpoint state
+    # uplinkPeriod -> periodicity of application in seconds
+    # dataLength -> size in bytes of application payload
+    # simDuration -> simulation duration in seconds
+    #
+    # ret -> txDuration, rxDuration, idleDuration, sleepDuration
+    #
+    #########################################################################################
+    def SimulateEndpointUnconfirmedLoRaWAN(self, uplinkPeriod, dataLength, simDuration):
+
+        # Calculate number of symbols of long preambles
+        calcPreamble = self.CalcPreamble(uplinkPeriod)
+        txtime = 0
+        rxTime = 0
+        idleTime = 0
+        sleepTime = 0
+
+        # Calculate uplink event tx, rx, idle, sleep tim
+        # Tx WOR
+        txTime = self.GetToAofWor(calcPreamble)
+        # Idle 
+        idleTime = self.n_idle_duration
+        # Sleep WOR_ACK_DELAY
+        sleepTime = self.GetWorDelay() - self.n_idle_duration
+        # Rx WOR ACK
+        rxTime = self.GetToAofWorAck()
+        # Idle 
+        idleTime = idleTime + self.n_idle_duration
+        # Sleep WOR_DATA_DELAY
+        sleepTime = sleepTime + self.GetWorDelay() - self.n_idle_duration
+        # Tx uplink
+        txTime = txTime + self.GetToAofUplink(dataLength)
+        # Idle
+        idleTime = idleTime + self.n_idle_duration
+        # Sleep rest of uplink slot of periodicity 
+        sleepTime = sleepTime + uplinkPeriod*1000 - (txTime + rxTime + idleTime)
+        
+        # Calculate how many upPeriods is in simDuration
+        nUp = simDuration//uplinkPeriod
+        sleepTime = sleepTime + (simDuration % uplinkPeriod)
 
         # Calculate total tx, rx, idle and sleep time with nUp
         txDuration = txTime*nUp/1000
@@ -165,14 +217,16 @@ class LoRaWAN(LoRaPHY):
     # ret -> txDuration, rxDuration, idleDuration, sleepDuration
     #
     #########################################################################################
-    def SimulateRelayLoRaWAN(self, uplinkPeriod, dataLength, simDuration, n):
+    def SimulateRelayConfirmedLoRaWAN(self, uplinkPeriod, dataLength, simDuration, n):
 
         # Calculate number of symbols of long preambles
         calcPreamble = self.CalcPreamble(uplinkPeriod)
-        # print("Calculated preamble size: ", calcPreamble)
+        txtime = 0
+        rxTime = 0
+        idleTime = 0
+        sleepTime = 0
 
-        # First, calculate uplink tx, rx, idle and sleep time
-        # UPLINK EVENT TIME CALCULATION
+        # First, calculate uplink event tx, rx, idle and sleep time
         # Rx WOR
         rxUpTime = self.GetToAofWor(calcPreamble)
         # Idle 
@@ -189,8 +243,8 @@ class LoRaWAN(LoRaPHY):
         rxUpTime = rxUpTime + self.GetToAofUplink(dataLength)
         # Idle 
         idleUpTime = idleUpTime + self.n_idle_duration
-        # Sleep RX1_DELAY
-        sleepUpTime = sleepUpTime + self.GetRx1Window() - self.n_idle_duration
+        # Sleep RELAY_FWD_DELAY = WOR_DATA_DELAY = WOR_ACK_DELAY
+        sleepUpTime = sleepUpTime + self.GetWorDelay() - self.n_idle_duration
         # Tx Forward uplink
         txUpTime = txUpTime + self.GetToAofUplink(dataLength + 6)
         # Idle 
@@ -214,21 +268,98 @@ class LoRaWAN(LoRaPHY):
         sleepUpTime = sleepUpTime + sleepRemainTime
         upTotalTime = txUpTime + rxUpTime + idleUpTime + sleepUpTime
 
-        # Second, calculate Cad event time
-        rxCadEventTime = self.ToSymb() * self.n_cad_symbols
-        idleCadEventTime = self.n_idle_duration
-        sleepCadEventTime = self._n_rxPeriodicity - (rxCadEventTime + self.n_idle_duration)
+        # Second, calculate Cad event rx, idle and sleep time
+        rxCadTime = self.ToSymb() * self.n_cad_symbols
+        idleCadTime = self.n_idle_duration
+        sleepCadTime = self._n_rxPeriodicity - (rxCadTime + self.n_idle_duration)
 
         # Third, count how many Uplinks and Cads happen
-        nUpEvents = simDuration/(uplinkPeriod/n)
-        nCadEvents = ( simDuration - nUpEvents*(upTotalTime) ) // self._n_rxPeriodicity
-        sleepTotalRemainTime = ( simDuration - nUpEvents*(upTotalTime) ) % self._n_rxPeriodicity
+        nUpEvents = (simDuration/uplinkPeriod)*n
+        nCadEvents = ( simDuration*1000 - nUpEvents*(upTotalTime) ) // self._n_rxPeriodicity
+        sleepTotalRemainTime = ( simDuration*1000 - nUpEvents*(upTotalTime) ) % self._n_rxPeriodicity
 
         # Fourth, calculate the time spent in each state with uplink and cad events number
         txTime = nUpEvents*txUpTime
-        rxTime = nUpEvents*rxUpTime + nCadEvents*rxCadEventTime
-        idleTime = nUpEvents*idleUpTime + nCadEvents*idleCadEventTime
-        sleepTime = nUpEvents*sleepUpTime + nCadEvents*sleepCadEventTime + sleepTotalRemainTime
+        rxTime = nUpEvents*rxUpTime + nCadEvents*rxCadTime
+        idleTime = nUpEvents*idleUpTime + nCadEvents*idleCadTime
+        sleepTime = nUpEvents*sleepUpTime + nCadEvents*sleepCadTime + sleepTotalRemainTime
+
+        # Finally, calculate total tx, rx, idle and sleep in seconds
+        txDuration = txTime/1000
+        rxDuration = rxTime/1000
+        idleDuration = idleTime/1000
+        sleepDuration = sleepTime/1000
+
+        # Return tx, rx, idle and sleep duration
+        return txDuration, rxDuration, idleDuration, sleepDuration
+    
+
+    #########################################################################################
+    # Simulate of a relay in LoRaWAN network unconfirmed uplink
+    #
+    # self -> object to handle endpoint state
+    # uplinkPeriod -> periodicity of applicaion uplink in seconds
+    # dataLength -> size in bytes of application payload
+    # simDuration -> simulation duration in seconds
+    # N -> number o endpoints connected to simuled relay
+    #
+    # ret -> txDuration, rxDuration, idleDuration, sleepDuration
+    #
+    #########################################################################################
+    def SimulateRelayUnconfirmedLoRaWAN(self, uplinkPeriod, dataLength, simDuration, n):
+
+        # Calculate number of symbols of long preambles
+        calcPreamble = self.CalcPreamble(uplinkPeriod)
+        txtime = 0
+        rxTime = 0
+        idleTime = 0
+        sleepTime = 0
+
+        # First, calculate uplink event tx, rx, idle and sleep time
+        # Rx WOR
+        rxUpTime = self.GetToAofWor(calcPreamble)
+        # Idle 
+        idleUpTime = self.n_idle_duration
+        # Sleep WOR_ACK_DELAY
+        sleepUpTime = self.GetWorDelay() - self.n_idle_duration
+        # Tx WOR ACK
+        txUpTime = self.GetToAofWorAck()
+        # Idle 
+        idleUpTime = idleUpTime + self.n_idle_duration
+        # Sleep WOR_DATA_DELAY
+        sleepUpTime = sleepUpTime + self.GetWorDelay() - self.n_idle_duration
+        # Rx Uplink
+        rxUpTime = rxUpTime + self.GetToAofUplink(dataLength)
+        # Idle 
+        idleUpTime = idleUpTime + self.n_idle_duration
+        # Sleep RELAY_FWD_DELAY
+        sleepUpTime = sleepUpTime + self.GetWorDelay() - self.n_idle_duration
+        # Tx Forward uplink
+        txUpTime = txUpTime + self.GetToAofUplink(dataLength + 6)
+        # Idle 
+        idleUpTime = idleUpTime + self.n_idle_duration
+        # Calculate the remaining of slot of rxPeriodicity time, and sum it to Sleep time
+        upTotalTime = txUpTime + rxUpTime + idleUpTime + sleepUpTime
+        sleepRemainTime = self._n_rxPeriodicity - (upTotalTime % self._n_rxPeriodicity)
+        # Sum remain sleep time and resum uplink event total time
+        sleepUpTime = sleepUpTime + sleepRemainTime
+        upTotalTime = txUpTime + rxUpTime + idleUpTime + sleepUpTime
+
+        # Second, calculate Cad event rx, idle and sleep time
+        rxCadTime = self.ToSymb() * self.n_cad_symbols
+        idleCadTime = self.n_idle_duration
+        sleepCadTime = self._n_rxPeriodicity - (rxCadTime + self.n_idle_duration)
+
+        # Third, count how many Uplinks and Cads happen
+        nUpEvents = (simDuration/uplinkPeriod)*n
+        nCadEvents = ( simDuration*1000 - nUpEvents*(upTotalTime) ) // self._n_rxPeriodicity
+        sleepTotalRemainTime = ( simDuration*1000 - nUpEvents*(upTotalTime) ) % self._n_rxPeriodicity
+
+        # Fourth, calculate the time spent in each state with uplink and cad events number
+        txTime = nUpEvents*txUpTime
+        rxTime = nUpEvents*rxUpTime + nCadEvents*rxCadTime
+        idleTime = nUpEvents*idleUpTime + nCadEvents*idleCadTime
+        sleepTime = nUpEvents*sleepUpTime + nCadEvents*sleepCadTime + sleepTotalRemainTime
 
         # Finally, calculate total tx, rx, idle and sleep in seconds
         txDuration = txTime/1000
