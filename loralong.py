@@ -70,7 +70,7 @@ class LoRaLong(LoRaPHY):
 
         # Calculate number of symbols of long preambles
         calcPreamble = self.GetSymbWor1S()
-        print("Calculated preamble size: ", calcPreamble)
+        # print("Calculated preamble size: ", calcPreamble)
 
         # First, calculate uplink tx, rx, idle and sleep time
         # Total TX time in uplink
