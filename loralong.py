@@ -70,47 +70,62 @@ class LoRaLong(LoRaPHY):
 
         # Calculate number of symbols of long preambles
         calcPreamble = self.GetSymbWor1S()
-        # print("Calculated preamble size: ", calcPreamble)
+        txtime = 0
+        rxTime = 0
+        idleTime = 0
+        sleepTime = 0
 
-        # First, calculate uplink tx, rx, idle and sleep time
-        # Total TX time in uplink
-        upAckSendTime = self.GetToAofAck()
-        upFwdSendTime = self.GetToAofMessage(8, dataLength + 6)
-        txUpTime = upAckSendTime + upFwdSendTime
-        # Total RX time in uplink
-        longUpReceiveTime = self.GetToAofMessage(calcPreamble, dataLength)
-        upFwdAckReceiveTime = self.GetToAofAck()
-        rxUpTime = longUpReceiveTime + upFwdAckReceiveTime
-        # Total Idle time in uplink (4 events of tx and rx)
-        idleUpTime = 4 * self.n_idle_duration
-        # Until end of endpoint task Sleep time
-        sleepUpTime = self.GetFwdDelay() + 2*self.GetRx1Window() - idleUpTime
+        # First, calculate uplink event tx, rx, idle and sleep time
+        # Rx long preamble uplink
+        rxUpTime = self.GetToAofMessage(calcPreamble, dataLength)
+        # Idle 
+        idleUpTime = self.n_idle_duration
+        # Sleep for RX1 to send an ACK
+        sleepUpTime = self.GetRx1Window() - self.n_idle_duration
+        # Tx uplink ACK
+        txUpTime = self.GetToAofAck()
+        # Idle 
+        idleUpTime = idleUpTime + self.n_idle_duration
+        # Sleep for FWD_DELAY
+        sleepUpTime = sleepUpTime + self.GetFwdDelay() - self.n_idle_duration
+        # Tx forwarded uplink (6 bytes of metadata)
+        txUpTime = txUpTime + self.GetToAofMessage(8, dataLength + 6)
+        # Idle 
+        idleUpTime = idleUpTime + self.n_idle_duration
+        # Sleep for RX1 to receive an ACK
+        sleepUpTime = sleepUpTime + self.GetRx1Window() - self.n_idle_duration
+        # Rx forwarded uplink ACK
+        rxUpTime = rxUpTime + self.GetToAofAck()
+        # Idle 
+        idleUpTime = idleUpTime + self.n_idle_duration
         # Calculate the remaining of slot of rxPeriodicity time, and sum it to Sleep time
-        sleepRemainTime = self._n_rxPeriodicity - ((txUpTime + rxUpTime + idleUpTime + sleepUpTime) % self._n_rxPeriodicity)
+        upTotalTime = txUpTime + rxUpTime + idleUpTime + sleepUpTime
+        sleepRemainTime = self._n_rxPeriodicity - (upTotalTime % self._n_rxPeriodicity)
+        # Sum remain sleep time and resum uplink event total time
         sleepUpTime = sleepUpTime + sleepRemainTime
-        # Calculate total uplink event time
-        upTime = txUpTime + rxUpTime + idleUpTime + sleepUpTime
+        upTotalTime = txUpTime + rxUpTime + idleUpTime + sleepUpTime
 
-        # Second, calculate how many Cad events has in the remaining of upPeriod
-        cadInUp = (((uplinkPeriod/n)*1000) - upTime)/self._n_rxPeriodicity
-        rxCadEventTime = cadInUp*(self.ToSymb() * self.n_cad_symbols)
-        idleCadEventTime = cadInUp*(self.n_idle_duration)
-        sleepCadEventTime = cadInUp*(self._n_rxPeriodicity - (self.ToSymb() * self.n_cad_symbols + self.n_idle_duration))
+        # Second, calculate Cad event rx, idle and sleep time
+        rxCadTime = self.ToSymb() * self.n_cad_symbols
+        idleCadTime = self.n_idle_duration
+        sleepCadTime = self._n_rxPeriodicity - (rxCadTime + self.n_idle_duration)
 
-        # Third, calculate in geral event (up + cad) all times
-        txTotalEventTime = txUpTime
-        rxTotalEventTime = rxUpTime + rxCadEventTime
-        idleTotalEventTime = idleUpTime + idleCadEventTime
-        sleepTotalEventTime = sleepUpTime + sleepCadEventTime
+        # Third, count how many Uplinks and Cads happen
+        nUpEvents = (simDuration/uplinkPeriod)*n
+        nCadEvents = ( simDuration*1000 - nUpEvents*(upTotalTime) ) // self._n_rxPeriodicity
+        sleepTotalRemainTime = ( simDuration*1000 - nUpEvents*(upTotalTime) ) % self._n_rxPeriodicity
 
-        # Forth, calculate how many uplink are in simulation with n endpoints connected
-        nUplinksEvents = (simDuration/uplinkPeriod)*n
+        # Fourth, calculate the time spent in each state with uplink and cad events number
+        txTime = nUpEvents*txUpTime
+        rxTime = nUpEvents*rxUpTime + nCadEvents*rxCadTime
+        idleTime = nUpEvents*idleUpTime + nCadEvents*idleCadTime
+        sleepTime = nUpEvents*sleepUpTime + nCadEvents*sleepCadTime + sleepTotalRemainTime
 
         # Finally, calculate total tx, rx, idle and sleep in seconds
-        txDuration = nUplinksEvents*txTotalEventTime/1000
-        rxDuration = nUplinksEvents*rxTotalEventTime/1000
-        idleDuration = nUplinksEvents*idleTotalEventTime/1000
-        sleepDuration = nUplinksEvents*sleepTotalEventTime/1000
+        txDuration = txTime/1000
+        rxDuration = rxTime/1000
+        idleDuration = idleTime/1000
+        sleepDuration = sleepTime/1000
 
         # Return tx, rx, idle and sleep duration
         return txDuration, rxDuration, idleDuration, sleepDuration
