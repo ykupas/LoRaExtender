@@ -51,9 +51,9 @@ class LoRaWAN(LoRaPHY):
             toa = 247.8
         elif self.n_sf == 11 and self.n_bw == 500:
             toa = 123.9
-        elif self.n_sf == 11 and self.n_bw == 125:
+        elif self.n_sf == 12 and self.n_bw == 125:
             toa = 991.2
-        elif self.n_sf == 11 and self.n_bw == 250:
+        elif self.n_sf == 12 and self.n_bw == 250:
             toa = 495.6
         elif self.n_sf == 12 and self.n_bw == 500:
             toa = 247.8
