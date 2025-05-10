@@ -106,6 +106,12 @@ class LoRaWAN(LoRaPHY):
     #########################################################################################
     def SimulateEndpointLoRaWAN(self, uplinkPeriod, dataLength, simDuration):
 
+
+        bw = self.GetBW()
+        sf = self.GetSF()
+        self.SetBW(500)
+        self.SetSF(10)
+
         # Calculate number of symbols of long preambles
         calcPreamble = self.CalcPreamble(uplinkPeriod)
         txtime = 0
@@ -122,6 +128,10 @@ class LoRaWAN(LoRaPHY):
         sleepTime = self.GetWorDelay() - self.n_idle_duration
         # Rx WOR ACK
         rxTime = self.GetToAofWorAck()
+
+        self.SetBW(bw)
+        self.SetSF(sf)
+
         # Idle 
         idleTime = idleTime + self.n_idle_duration
         # Sleep WOR_DATA_DELAY
@@ -153,7 +163,7 @@ class LoRaWAN(LoRaPHY):
     
 
     #########################################################################################
-    # Simulate a endpoint LoRaWAN one-hop relay network confirmed uplink from endpoint
+    # Simulate a endpoint LoRaWAN one-hop relay network unconfirmed uplink from endpoint
     #
     # self -> object to handle endpoint state
     # uplinkPeriod -> periodicity of application in seconds
@@ -164,6 +174,11 @@ class LoRaWAN(LoRaPHY):
     #
     #########################################################################################
     def SimulateEndpointUnconfirmedLoRaWAN(self, uplinkPeriod, dataLength, simDuration):
+
+        bw = self.GetBW()
+        sf = self.GetSF()
+        self.SetBW(500)
+        self.SetSF(10)
 
         # Calculate number of symbols of long preambles
         calcPreamble = self.CalcPreamble(uplinkPeriod)
@@ -181,6 +196,10 @@ class LoRaWAN(LoRaPHY):
         sleepTime = self.GetWorDelay() - self.n_idle_duration
         # Rx WOR ACK
         rxTime = self.GetToAofWorAck()
+
+        self.SetBW(bw)
+        self.SetSF(sf)
+
         # Idle 
         idleTime = idleTime + self.n_idle_duration
         # Sleep WOR_DATA_DELAY
@@ -219,6 +238,11 @@ class LoRaWAN(LoRaPHY):
     #########################################################################################
     def SimulateRelayConfirmedLoRaWAN(self, uplinkPeriod, dataLength, simDuration, n):
 
+        bw = self.GetBW()
+        sf = self.GetSF()
+        self.SetBW(500)
+        self.SetSF(10)
+
         # Calculate number of symbols of long preambles
         calcPreamble = self.CalcPreamble(uplinkPeriod)
         txtime = 0
@@ -235,6 +259,10 @@ class LoRaWAN(LoRaPHY):
         sleepUpTime = self.GetWorDelay() - self.n_idle_duration
         # Tx WOR ACK
         txUpTime = self.GetToAofWorAck()
+
+        self.SetBW(bw)
+        self.SetSF(sf)
+
         # Idle 
         idleUpTime = idleUpTime + self.n_idle_duration
         # Sleep WOR_DATA_DELAY
@@ -308,6 +336,11 @@ class LoRaWAN(LoRaPHY):
     #########################################################################################
     def SimulateRelayUnconfirmedLoRaWAN(self, uplinkPeriod, dataLength, simDuration, n):
 
+        bw = self.GetBW()
+        sf = self.GetSF()
+        self.SetBW(500)
+        self.SetSF(10)
+
         # Calculate number of symbols of long preambles
         calcPreamble = self.CalcPreamble(uplinkPeriod)
         txtime = 0
@@ -324,6 +357,10 @@ class LoRaWAN(LoRaPHY):
         sleepUpTime = self.GetWorDelay() - self.n_idle_duration
         # Tx WOR ACK
         txUpTime = self.GetToAofWorAck()
+
+        self.SetBW(bw)
+        self.SetSF(sf)
+
         # Idle 
         idleUpTime = idleUpTime + self.n_idle_duration
         # Sleep WOR_DATA_DELAY
