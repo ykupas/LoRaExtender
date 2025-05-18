@@ -167,7 +167,7 @@ class LoRaPHY:
     # Config device RX periodicity
     def SetRxPeriodicity(self, periodicity):
         self._n_rxPeriodicity = periodicity
-    def SetRxPeriodicity(self):
+    def GetRxPeriodicity(self):
         return self._n_rxPeriodicity
     
 
