@@ -99,7 +99,7 @@ class LoRaPHY:
     # Calculate how many symbols in WOR preamble to reach x seconds
     def GetSymbWorXS(self, x):
         # Get symbol duration, divide by 1000 ms and subtract 4 of sync word
-        return math.floor(x*1000/self.ToSymb() + 1 + 6 + self.n_cadToRx)
+        return math.floor(x/self.ToSymb() + 1 + 6 + self.n_cadToRx)
 
 
     # Config LoRa phy payload size
