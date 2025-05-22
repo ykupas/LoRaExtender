@@ -94,6 +94,12 @@ class LoRaPHY:
     def GetSymbWor1S(self):
         # Get symbol duration, divide by 1000 ms and subtract 4 of sync word
         return math.floor(1000/self.ToSymb() + 1 + 6 + self.n_cadToRx)
+    
+
+    # Calculate how many symbols in WOR preamble to reach x seconds
+    def GetSymbWorXS(self, x):
+        # Get symbol duration, divide by 1000 ms and subtract 4 of sync word
+        return math.floor(x/self.ToSymb() + 1 + 6 + self.n_cadToRx)
 
 
     # Config LoRa phy payload size
@@ -156,6 +162,13 @@ class LoRaPHY:
         self.n_accuracy = accuracy
     def SetAccuracy(self):
         return self.n_accuracy
+    
+
+    # Config device RX periodicity
+    def SetRxPeriodicity(self, periodicity):
+        self._n_rxPeriodicity = periodicity
+    def GetRxPeriodicity(self):
+        return self._n_rxPeriodicity
     
 
     # Config other LoRa params from lib
